@@ -1,7 +1,7 @@
 import numpy as np
 from itertools import permutations
 
-from util import Moment, Player, SCALE
+from src.util import Moment, Player, SCALE
 
 DEFAULT_EPS = 0.5 * SCALE
 
@@ -122,8 +122,10 @@ class ProcessedMoment:
     def loss(self, gravity, rim_weight=0.2, p=2):
         resid = self.resid(gravity, rim_weight, p)
         total = 0
-        for r in resid.values():
-            total += np.dot(r, r)
+        for vec in resid.values():
+            for r in vec:
+                total += r**2
+            # total += np.dot(vec, vec)
         return total
 
     def matrix(self, rim_weight=0.2, p=2, eps=DEFAULT_EPS):

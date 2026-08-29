@@ -3,7 +3,7 @@
 import json
 import sys
 
-from event_enhanced import Season
+from advanced.event_enhanced import Season
 
 
 if len(sys.argv) < 2:

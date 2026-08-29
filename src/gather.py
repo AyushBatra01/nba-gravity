@@ -1,6 +1,6 @@
 import numpy as np
 
-from util import Player, Moment, SCALE
+from src.util import Player, Moment, SCALE
 
 def get_logs(game):
     # get all logs for an entire game

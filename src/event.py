@@ -1,8 +1,8 @@
 import numpy as np
 
-from process import ProcessedMoment, DEFAULT_EPS
-from gather import get_event_logs, possession_team
-from util import Moment
+from src.process import ProcessedMoment, DEFAULT_EPS
+from src.gather import get_event_logs, possession_team
+from src.util import Moment
 
 
 MINIMUM_MOMENTS = 5
@@ -107,10 +107,13 @@ class Season:
         self.id_to_index = {pid: i for i, pid in enumerate(self.player_list)}
 
 
-    def loss(self, gravity, rim_weight, p):
+    def loss(self, gravity, rim_weight, p, alpha=1e-3, with_alpha=True):
         total = 0
         for g in self.games:
             total += g.loss(gravity, rim_weight, p)
+        if with_alpha:
+            grav = np.array([m for m in gravity.values()])
+            total += alpha * np.linalg.norm(grav)**2
         return total
 
     # def matrix(self, rim_weight=0.2, p=2, eps=DEFAULT_EPS):

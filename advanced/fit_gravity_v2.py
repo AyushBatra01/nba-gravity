@@ -10,7 +10,7 @@ import json
 import sys
 from pathlib import Path
 
-from gravity_model_v2 import TrackingBatch
+from advanced.gravity_model_v2 import TrackingBatch
 
 
 def main(paths: list[str]) -> None:

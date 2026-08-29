@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-from util import Player, Moment, SCALE, COURT_LENGTH, COURT_WIDTH
+from src.util import Player, Moment, SCALE, COURT_LENGTH, COURT_WIDTH
     
 
 def visualize_moment(moment, poss_team):

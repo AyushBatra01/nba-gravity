@@ -1,12 +1,18 @@
 .DS_Store
 
-.ipynb_checkpoints/*
+.ipynb_checkpoints/
 
-__pycache__/*
+.venv/
 
-games/*
+.vscode/
+
+__pycache__/
+
+games/
 
 run_enhanced_gravity.ipynb
+
+*.icloud
 
 
 

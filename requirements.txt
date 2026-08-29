@@ -1,0 +1,6 @@
+matplotlib
+numpy
+py7zr
+scikit-learn
+scipy
+tqdm

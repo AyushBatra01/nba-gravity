@@ -16,7 +16,7 @@ from scipy.sparse import coo_matrix, csr_matrix
 from scipy.sparse.linalg import lsqr
 
 from gather import get_event_logs, possession_team
-from process_enhanced import DEFAULT_EPS, ProcessedMoment
+from advanced.process_enhanced import DEFAULT_EPS, ProcessedMoment
 from util import Moment
 
 

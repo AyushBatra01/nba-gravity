@@ -1,165 +1,196 @@
 import numpy as np
 
-from src.util import Player, Moment, SCALE
+from src.util import BALL_TEAM_ID, Moment, SCALE
 
-def get_logs(game):
-    # get all logs for an entire game
-    pass
+
+def get_logs(game, gap=0.25, pad=3.0):
+    """Collect clean sampled moments across every event in a game.
+
+    Most modeling code goes through `Game`/`Season`, but this helper is useful
+    in notebooks when you just want a flat list of moments.
+    """
+    logs = []
+    indices = []
+    errors = 0
+    start = None
+
+    for event_index, event in enumerate(game["events"]):
+        if len(event["moments"]) == 0:
+            continue
+
+        # reset bounds at start of each period
+        if Moment(event["moments"][0]).game_clock == 720.0:
+            start = None
+
+        event_logs, event_indices, event_errors = get_event_logs(
+            event,
+            gap=gap,
+            pad=pad,
+            bound_start=start,
+        )
+
+        logs.extend(event_logs)
+        indices.extend((event_index, moment_index) for moment_index in event_indices)
+        errors += event_errors
+
+        if event_logs:
+            start = event_logs[-1].game_clock
+
+    return logs, indices, errors
+
 
 def get_event_logs(event, gap=0.25, pad=3.0, bound_start=None, bound_end=None):
-    """
-    get logs for a single event
+    """Sample clean tracking moments from one event.
 
     Parameters
     ----------
     event : dict
-        dictionary containing an entry for 'moments'
-
+        Raw event dictionary containing a `moments` list.
     gap : float
-        number of seconds between each logged moment
-
+        Minimum seconds between sampled moments.
     pad : float
-        number of seconds to cut from event start and end (to avoid transition)
-
+        Seconds trimmed from event start/end to avoid transition noise.
     bound_start : None or float
-        only look for moments after this game clock time (not active if None)
-
-    boun_end : None or float
-        only look for moments before this game clock time (not active if None)
+        Optional high game-clock bound. Used to avoid overlap with the previous
+        processed event in the same period.
+    bound_end : None or float
+        Optional low game-clock bound.
     """
-    log = []
-    event_idx = []
-    moments = [Moment(m) for m in event['moments']]
+    raw_moments = event.get("moments", [])
+    if len(raw_moments) < 2:
+        return [], [], 0
+
+    moments = [Moment(moment) for moment in raw_moments]
+
+    # Game clock counts down, so begin is larger than end within a normal event.
     begin = moments[0].game_clock
     end = moments[-1].game_clock
+
     if bound_start is not None:
         begin = min(begin, bound_start)
     if bound_end is not None:
         end = max(end, bound_end)
 
-    last = begin
-    n_error = 0
-    for i in range(len(moments)-1):
-        moment = moments[i]
-        moment_next = moments[i+1]
+    logs = []
+    event_indices = []
+    last_sampled_clock = begin
+    num_errors = 0
+
+    for index in range(len(moments) - 1):
+        moment = moments[index]
+        next_moment = moments[index + 1]
         clock = moment.game_clock
-        clock_next = moment_next.game_clock
-        time_elapsed = clock - clock_next
-        if time_elapsed != 0 and begin - clock > pad and clock - end > pad and last - clock >= gap:
-            if not all_moment_checks(moment, moment_next):
-                n_error += 1
+        next_clock = next_moment.game_clock
+
+        # Ignore duplicate timestamps. 
+        if clock == next_clock:
+            continue
+
+        enough_start_padding = begin - clock > pad
+        enough_end_padding = clock - end > pad
+        enough_gap = last_sampled_clock - clock >= gap
+
+        if enough_start_padding and enough_end_padding and enough_gap:
+            if not all_moment_checks(moment, next_moment):
+                num_errors += 1
                 continue
-            log.append(moment)
-            event_idx.append(i)
-            last = clock
-    return log, event_idx, n_error
+
+            logs.append(moment)
+            event_indices.append(index)
+            last_sampled_clock = clock
+
+    return logs, event_indices, num_errors
 
 
 def possession_team(event_logs, check_tie=True):
-    """
-    find team with possession for the event from the event logs
-    determines possessing team based on which team is closest to the ball for the majority of the logged moments
-
-    Parameters
-    ----------
-    event_logs : lst
-        output of get_event_logs()
-
-    check_tie : bool
-        checks if both teams have same number of instances where closest to ball
-    """
+    """Infer possession from which team is closest to the ball most often."""
     counts = {}
-    totals = {}
-    top_n = 0
-    poss_tm = None
+    total_closest_dist = {}
+
     for moment in event_logs:
-        locs = moment.locations
         ball_xy = moment.ball_location()
-        lowest = 9999999
-        tm = None
-        for i in range(1,11):
-            dist = np.linalg.norm(ball_xy - locs[i].xy)
-            if dist < lowest:
-                lowest = dist
-                tm = locs[i].team_id
-        if tm not in counts:
-            counts[tm] = 0
-        counts[tm] += 1
-        if tm not in totals:
-            totals[tm] = 0.0
-        totals[tm] += lowest
-        if counts[tm] > top_n:
-            top_n = counts[tm]
-            poss_tm = tm
-    # ensure its not a tie
-    if check_tie:
-        n_with_top = 0
-        for tm, cnt in counts.items():
-            if cnt == top_n:
-                n_with_top += 1
-        # assert n_with_top == 1, "Unable to discern possessing team!"
-        low_tm = None
-        low_val = 9999999
-        for tm, cnt in counts.items():
-            if cnt == top_n and totals[tm] < low_val:
-                low_tm = tm
-                low_val = totals[tm]
-        poss_tm = low_tm
-    return poss_tm
+        players = [player for player in moment.locations if player.team_id != BALL_TEAM_ID]
 
+        closest_player = min(
+            players,
+            key=lambda player: np.linalg.norm(ball_xy - player.xy),
+        )
+        closest_dist = np.linalg.norm(ball_xy - closest_player.xy)
+        team_id = closest_player.team_id
 
+        counts[team_id] = counts.get(team_id, 0) + 1
+        total_closest_dist[team_id] = total_closest_dist.get(team_id, 0.0) + closest_dist
 
+    if not counts:
+        raise ValueError("Cannot infer possession from an empty event.")
 
+    top_count = max(counts.values())
+    candidate_teams = [
+        team_id
+        for team_id, count in counts.items()
+        if count == top_count
+    ]
+
+    if len(candidate_teams) == 1 or not check_tie:
+        return candidate_teams[0]
+
+    # Tie-breaker: if each team is closest equally often, pick the team whose
+    # closest-player distances were smaller in total.
+    return min(candidate_teams, key=lambda team_id: total_closest_dist[team_id])
 
 
 def check_no_overlap(moment):
-    # no completely overlapping players
-    locs = set()
+    """Reject moments with two non-ball players at exactly the same location."""
+    seen_locations = set()
+
     for player in moment.locations:
-        if player.player_id in [-1,-2]:
+        if player.team_id == BALL_TEAM_ID:
             continue
-        pxy = (player.xy[0], player.xy[1])
-        if pxy in locs:
+
+        location = tuple(player.xy)
+        if location in seen_locations:
             return False
-        locs.add(pxy)
+        seen_locations.add(location)
+
     return True
 
-def check_distance(moment1, moment2, max_dist_per_sec=SCALE*50):
-    # make sure not unrealistic distance
-    clock_gap = np.abs(moment1.game_clock - moment2.game_clock)
-    locs1 = {}
-    for player in moment1.locations:
-        pid = player.player_id
-        locs1[pid] = player.xy
+
+def check_distance(moment1, moment2, max_dist_per_sec=SCALE * 50):
+    """Reject moments where a player moves an unrealistic distance."""
+    clock_gap = abs(moment1.game_clock - moment2.game_clock)
+    if clock_gap == 0:
+        return False
+
+    previous_locations = {
+        player.player_id: player.xy
+        for player in moment1.locations
+    }
+
     for player in moment2.locations:
-        pid = player.player_id
-        if pid not in locs1:
+        if player.player_id not in previous_locations:
             return False
-        pxy1 = locs1[pid]
-        pxy2 = player.xy
-        d = np.linalg.norm(pxy1 - pxy2)
-        if d > clock_gap * max_dist_per_sec:
+
+        distance = np.linalg.norm(previous_locations[player.player_id] - player.xy)
+        if distance > clock_gap * max_dist_per_sec:
             return False
+
     return True
+
 
 def check_players(moment1, moment2):
-    # make sure same 10 players
-    players1 = set()
-    for player in moment1.locations:
-        players1.add(player.player_id)
-    if len(players1) != 11:
+    """Require the same ball plus ten player IDs in adjacent moments."""
+    player_ids = {player.player_id for player in moment1.locations}
+
+    if len(player_ids) != 11:
         return False
-    for player in moment2.locations:
-        if player.player_id not in players1:
-            return False
-    return True
+
+    return all(player.player_id in player_ids for player in moment2.locations)
+
 
 def all_moment_checks(moment1, moment2):
-    return check_no_overlap(moment1) and check_players(moment1, moment2) and check_distance(moment1, moment2)
-
-
-
-
-
-
-    
+    """Run all lightweight data-quality checks used before modeling."""
+    return (
+        check_no_overlap(moment1)
+        and check_players(moment1, moment2)
+        and check_distance(moment1, moment2)
+    )

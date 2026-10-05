@@ -1,5 +1,6 @@
-import py7zr
+from src.unzip import unzip
 
-def extract_json(path):
-    with py7zr.SevenZipFile(path, mode='r') as z:
-        z.extractall(path="games")
+
+def extract_json(path, output_dir="games"):
+    """Extract a compressed game archive into the local games directory."""
+    unzip(path, output_dir)

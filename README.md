@@ -47,6 +47,7 @@ The fitted gravity values are intended to represent how much each offensive play
 │   ├── solver.py                 # optional geometry/gravity fitting experiments
 │   ├── unzip.py                  # generic 7z extraction helper
 │   └── util.py                   # Moment and Player data wrappers
+├── scripts/                      # additional scripts to understand model behavior
 ├── run_gravity_workflow.py       # simple end-to-end script for the current workflow
 ├── unzip_all.py                  # run 7z extraction on all raw tracking data files
 └── requirements.txt              # Python dependencies

@@ -48,6 +48,12 @@ One way to do this is to make the ridge penalty depend on playing time, possessi
 
 This is the most pressing next extension since it will address noisy one game estimates. 
 
+### Advanced Visualizations
+
+Visualize how the model explains defender positioning for individual tracking moments.
+
+The visualization could display each defender's baseline location from the inferred matchup, actual location, and predicted location after applying the fitted gravity values. Comparing these positions would make it easier to see what is driving the model's predictions, identify systematic errors, and decide which assumptions should be improved in later versions.
+
 ## Version 3 and Beyond
 
 ### On-Ball vs Off-Ball Gravity

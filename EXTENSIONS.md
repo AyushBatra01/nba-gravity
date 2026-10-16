@@ -14,14 +14,6 @@ This is the natural first step for Version 2 because one-game gravity values wil
 
 Link to other 7z files: https://github.com/sealneaward/nba-movement-data/tree/master
 
-### Sanity Check Outputs
-
-Create simple checks that the fitted gravity values resemble basketball reality.
-
-Examples could include checking whether known high-usage offensive threats rank reasonably high, whether the ball's fitted gravity is sensible, whether low-minute players look overly extreme, and whether values are stable across nearby parameter choices.
-
-This does not prove the model is correct, but it helps catch obvious failures before adding more complicated extensions.
-
 ### Efficiency Improvements
 
 Make the alternating fit practical enough to use as part of the normal workflow.
@@ -32,19 +24,13 @@ A practical first version could optimize geometry on a random subset of moments,
 
 The goal is making the alternating fit fast enough that it can be used while experimenting, comparing settings, and scaling to multiple games.
 
-### Testing
-
-Add tests for the parts of the pipeline that are easiest to accidentally break.
-
-Good first targets are moment filtering, possession inference, matchup assignment, baseline construction, normal-equation construction, and the relationship between raw loss and RMSE. Small synthetic tracking moments would be enough for most of these tests.
-
-This would make the project safer to extend, especially once future versions start changing model assumptions.
-
 ### Sample-Size-Aware Gravity
 
 Shrink low-sample players more aggressively toward zero.
 
 One way to do this is to make the ridge penalty depend on playing time, possessions, or number of modeled moments. Players with fewer observations would get a larger penalty, while high-minute players would be estimated more freely.
+
+Ordinary ridge regression can also be viewed as zero-centered partial pooling: all player gravities are assumed to come from a shared distribution centered at zero. Even with one shared penalty, players with less information in the design matrix are naturally pulled closer to zero, while strongly supported estimates are influenced more by the data. This suggests keeping the current linear solve intact and instead increasing the regularization penalty. 
 
 This is the most pressing next extension since it will address noisy one game estimates. 
 
@@ -53,6 +39,22 @@ This is the most pressing next extension since it will address noisy one game es
 Visualize how the model explains defender positioning for individual tracking moments.
 
 The visualization could display each defender's baseline location from the inferred matchup, actual location, and predicted location after applying the fitted gravity values. Comparing these positions would make it easier to see what is driving the model's predictions, identify systematic errors, and decide which assumptions should be improved in later versions.
+
+### Testing
+
+Add tests for the parts of the pipeline that are easiest to accidentally break.
+
+Good first targets are moment filtering, possession inference, matchup assignment, baseline construction, normal-equation construction, and the relationship between raw loss and RMSE. Small synthetic tracking moments would be enough for most of these tests.
+
+This would make the project safer to extend, especially once future versions start changing model assumptions.
+
+### Sanity Check Outputs
+
+Create simple checks that the fitted gravity values resemble basketball reality.
+
+Examples could include checking whether known high-usage offensive threats rank reasonably high, whether the ball's fitted gravity is sensible, whether low-minute players look overly extreme, and whether values are stable across nearby parameter choices.
+
+This does not prove the model is correct, but it helps catch obvious failures before adding more complicated extensions.
 
 ## Version 3 and Beyond
 

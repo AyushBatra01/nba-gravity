@@ -7,7 +7,6 @@ from src.util import SCALE
 
 
 BALL_ID = -1
-RIM_ID = -2
 
 
 @dataclass(frozen=True)
@@ -85,11 +84,10 @@ def baseline_locations(offensive_players, defensive_players, matchups, rim_xy, r
     return baselines
 
 
-def attractor_locations(offensive_players, ball_xy, rim_xy):
+def attractor_locations(offensive_players, ball_xy):
     """Return the objects that can pull defenders away from baseline."""
     locations = {player.player_id: player.xy for player in offensive_players}
     locations[BALL_ID] = ball_xy
-    locations[RIM_ID] = rim_xy
     return locations
 
 

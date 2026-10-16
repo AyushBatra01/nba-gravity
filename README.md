@@ -17,7 +17,6 @@ For each tracking moment, the model:
 5. Predicts how the defender moves away from that baseline based on gravity from:
    - each offensive player
    - the ball
-   - the rim
 6. Fits gravity values that minimize the difference between predicted and actual defender locations.
 
 In rough terms:
@@ -27,7 +26,6 @@ actual defender location
   ~= baseline matchup/rim location
    + pull from offensive players
    + pull from ball
-   + pull from rim
 ```
 
 The fitted gravity values are intended to represent how much each offensive player warps defensive positioning.
@@ -202,7 +200,7 @@ The gravity model is intentionally simple right now:
 - Possession is inferred from whichever team is closest to the ball for most logged moments in an event.
 - Each defender's baseline location is a weighted average of their matchup and the rim.
 - Rim direction is inferred from the average non-ball player location in the moment.
-- Offensive players, the ball, and the rim exert distance-decayed influence on defenders.
+- Offensive players and the ball exert distance-decayed influence on defenders. The rim affects only the baseline position through `rim_weight`.
 - Gravity fitting is solved with regularized normal equations.
 
 The main tunable parameters live in `GravityConfig`:

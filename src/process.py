@@ -2,7 +2,6 @@ import numpy as np
 
 from src.model import (
     BALL_ID,
-    RIM_ID,
     GravityConfig,
     attractor_locations,
     baseline_locations,
@@ -27,8 +26,8 @@ class ProcessedMoment:
         self.poss_team_id = poss_team_id
         self.moment = moment
 
-        # The ball and rim are special attractors in the model. They get their
-        # own synthetic IDs so they can be fitted beside real player IDs.
+        # The ball is a special attractor with its own synthetic ID. The rim is
+        # used only to construct defender baselines, not as a fitted gravity.
         self.ball = self.moment.ball_location()
         self.rim = self.moment.rim_location()
 
@@ -39,7 +38,7 @@ class ProcessedMoment:
 
         # Dictionaries are convenient when calculating residuals or matching
         # fitted coefficients back to player IDs.
-        self.off_loc = attractor_locations(self.off_players, self.ball, self.rim)
+        self.off_loc = attractor_locations(self.off_players, self.ball)
         self.def_loc = {
             defender.player_id: defender.xy
             for defender in self.def_players
@@ -50,7 +49,7 @@ class ProcessedMoment:
         # Cache the small arrays used repeatedly during fitting. Geometry
         # optimization calls normal-equation construction many times, so avoiding
         # repeated list/dict work here makes alternating fits much cheaper.
-        self.attractor_ids = [player.player_id for player in self.off_players] + [BALL_ID, RIM_ID]
+        self.attractor_ids = [player.player_id for player in self.off_players] + [BALL_ID]
         self.attractor_xy = np.array([self.off_loc[attractor_id] for attractor_id in self.attractor_ids])
         self.defender_xy = np.array([player.xy for player in self.def_players])
         self.matchup_xy = np.array([
@@ -134,9 +133,9 @@ class ProcessedMoment:
     def local_normal_equation_terms(self, id_to_index, rim_weight=0.2, p=2, eps=DEFAULT_EPS):
         """Return this moment's small contribution to the global fit.
 
-        Each moment only involves seven fitted attractors: five offensive
-        players, the ball, and the rim. Returning local terms lets `Season`
-        place those 7-by-7 values into the larger season matrix directly.
+        Each moment only involves six fitted attractors: five offensive
+        players and the ball. Returning local terms lets `Season` place those
+        6-by-6 values into the larger season matrix directly.
         """
         indices = [id_to_index[attractor_id] for attractor_id in self.attractor_ids]
 
@@ -154,7 +153,7 @@ class ProcessedMoment:
         bx = target[:, 0]
         by = target[:, 1]
 
-        # Local terms are only 7x7 for a moment (ball, rim, 5 off. players).
+        # Local terms are only 6x6 for a moment (ball and 5 offensive players).
         # Return indices so the caller can place them into the larger season matrix.
         AtA_local = Ax.T @ Ax + Ay.T @ Ay
         Atb_local = Ax.T @ bx + Ay.T @ by

@@ -9,7 +9,7 @@ base_dir = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(base_dir))
 
 from src.event import Season
-from src.model import BALL_ID, RIM_ID, GravityConfig
+from src.model import BALL_ID, GravityConfig
 from src.solver import Solver
 
 game_dir = base_dir / "games"
@@ -34,8 +34,6 @@ def label_for_id(player_id, id_to_name):
     """Use human labels for synthetic IDs and real player IDs."""
     if player_id == BALL_ID:
         return "Ball"
-    if player_id == RIM_ID:
-        return "Rim"
     return id_to_name.get(player_id, f"Player {player_id}")
 
 
@@ -132,7 +130,7 @@ def print_rank_comparison(
 
 
 def print_most_events(
-    values1, ids1, values2, ids2, id_to_name, moment_counts, event_counts, limit=12
+    values1, ids1, values2, ids2, id_to_name, moment_counts, event_counts, limit=11
 ):
     """Show gravity estimates for the players with the most event coverage."""
     gravity1 = dict(zip(ids1, values1))

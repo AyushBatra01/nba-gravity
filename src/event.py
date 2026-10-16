@@ -1,7 +1,7 @@
 import numpy as np
 
 from src.gather import get_event_logs, possession_team
-from src.model import BALL_ID, RIM_ID, GravityConfig
+from src.model import BALL_ID, GravityConfig
 from src.process import DEFAULT_EPS, ProcessedMoment
 from src.util import Moment
 
@@ -127,8 +127,8 @@ class Season:
     def __init__(self, games, gap=0.25, pad=3.0):
         self.games = [Game(game, gap=gap, pad=pad) for game in games]
 
-        # keep track of all unique offensive players across the season, plus the
-        # ball and rim. This is the list of players we fit gravity for.
+        # Keep track of all unique offensive players across the season, plus the
+        # ball. The rim affects the baseline but does not get fitted gravity.
         offensive_player_ids = {
             player.player_id
             for game in self.games
@@ -137,7 +137,7 @@ class Season:
             for player in moment.off_players
         }
 
-        self.player_list = sorted(offensive_player_ids | {BALL_ID, RIM_ID})
+        self.player_list = sorted(offensive_player_ids | {BALL_ID})
         self.id_to_index = {
             player_id: index
             for index, player_id in enumerate(self.player_list)

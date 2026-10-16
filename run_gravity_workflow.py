@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 
 from src.event import Season
-from src.model import BALL_ID, RIM_ID, GravityConfig
+from src.model import BALL_ID, GravityConfig
 from src.solver import Solver
 
 base_dir = Path.cwd()
@@ -39,8 +39,6 @@ def label_for_id(player_id, id_to_name):
     """Use human labels for synthetic IDs and real player IDs."""
     if player_id == BALL_ID:
         return "Ball"
-    if player_id == RIM_ID:
-        return "Rim"
     return id_to_name.get(player_id, f"Player {player_id}")
 
 

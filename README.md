@@ -94,6 +94,12 @@ That should produce a JSON game file such as:
 games/0021500438.json
 ```
 
+To unzip all the raw games at once:
+
+```bash
+python unzip_all.py
+```
+
 The `games/` directory is ignored by git, so extracted data stays local. This is done to avoid adding large files to git.
 
 ## Basic Usage

@@ -16,13 +16,18 @@ from src.event import Season
 from src.model import BALL_ID, RIM_ID, GravityConfig
 from src.solver import Solver
 
+base_dir = Path.cwd()
+game_dir = base_dir / "games"
 
-GAME_PATH = Path("games/0021500438.json")
+GAME_PATHS = [f for f in game_dir.iterdir() if f.suffix == ".json"]
 
 
-def player_name_lookup(game):
+def player_name_lookup(games):
     """Build a player_id -> readable name dictionary from one game file."""
-    players = game["events"][0]["visitor"]["players"] + game["events"][0]["home"]["players"]
+    players = []
+    for game in games:
+        players.extend(game["events"][0]["visitor"]["players"])
+        players.extend(game["events"][0]["home"]["players"])
 
     return {
         player["playerid"]: f"{player['firstname']} {player['lastname']}"
@@ -71,13 +76,21 @@ def print_gravity_table(
 
 
 def main():
-    if not GAME_PATH.exists():
-        raise FileNotFoundError(
-            f"{GAME_PATH} does not exist. Extract the sample data before running this script."
-        )
+    games = []
+    seen_game_ids = set()
+    for path in GAME_PATHS:
+        if not path.exists():
+            raise FileNotFoundError(
+                f"{path} does not exist. Extract the sample data before running this script."
+            )
+        with path.open() as f:
+            game = json.load(f)
 
-    with GAME_PATH.open() as f:
-        game = json.load(f)
+            # Do not count duplicate copies of the same game more than once.
+            if game["gameid"] in seen_game_ids:
+                continue
+            seen_game_ids.add(game["gameid"])
+            games.append(game)
 
     # These parameters define the current modeling assumption:
     # - defenders have a baseline position between matchup and rim
@@ -89,9 +102,9 @@ def main():
         alpha=1.0,
     )
 
-    season = Season([game])
+    season = Season(games)
     solver = Solver(season)
-    id_to_name = player_name_lookup(game)
+    id_to_name = player_name_lookup(games)
 
     print(f"Processed games: {len(season.games)}")
     print(f"Processed events: {sum(len(game.events) for game in season.games)}")
@@ -115,7 +128,7 @@ def main():
         initial_config=config,
         max_iterations=3,
         geometry_max_iterations=8,
-        verbose=False,
+        verbose=True,
     )
     print()
     print_gravity_table(

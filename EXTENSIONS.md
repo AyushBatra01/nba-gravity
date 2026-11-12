@@ -34,6 +34,18 @@ Ordinary ridge regression can also be viewed as zero-centered partial pooling: a
 
 This is the most pressing next extension since it will address noisy one game estimates. 
 
+### Train/Validation/Test Evaluation and Alpha Tuning
+
+Split the data by whole games into training, validation, and test sets. Adjacent tracking frames are highly correlated, so randomly splitting moments would leak nearly identical situations across sets. Remove duplicate games before splitting; a chronological split is useful if the goal is predicting future games.
+
+Fit player gravity values and any learned geometry parameters on the training set. Try a logarithmic grid of `alpha` values, such as 0.1, 1, 10, and 100, and choose the value with the lowest validation prediction error. Larger `alpha` means stronger ridge shrinkage toward zero. The current alternating fit holds `alpha` fixed and only tunes `rim_weight` and `decay_power`; alpha selection would wrap around that fitting procedure. With few games, use cross-validation by game within the development data while keeping a separate test set untouched.
+
+After selecting alpha and the model assumptions, refit on training plus validation games and evaluate once on the test games without refitting on them. Use unpenalized per-coordinate RMSE, excluding the ridge penalty; the current solver returns a penalized objective, so its reported loss is not directly suitable for this comparison. Because the training objective sums errors, the effective strength of a fixed alpha depends on sample size; establish a consistent normalization when comparing folds and refitting on more games.
+
+Compare held-out error against a baseline with no gravity effects and a model with one shared player-gravity coefficient rather than individual values. Fit each baseline's parameters using training data only. Report results for players seen in training, especially the core teams, and define a fallback such as zero gravity for unseen players, reporting that coverage separately.
+
+Lower test error would support learning patterns that generalize across games. It would not by itself prove that individual coefficients measure causal basketball gravity, so also check player-estimate stability across game splits and compare representative possessions with the eye test. Use validation results for ongoing model choices; repeated changes based on test results would turn the test set into another validation set.
+
 ### Advanced Visualizations
 
 Visualize how the model explains defender positioning for individual tracking moments.

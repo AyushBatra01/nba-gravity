@@ -4,13 +4,9 @@ This file lists possible extensions to the current gravity model that may be imp
 
 ## Version 2
 
-### Multi-Game Support
+### Multi-Game Support — Complete
 
-Run the current workflow on a larger set of games instead of only the single sample game.
-
-The code is already structured around `Season([game1, game2, ...])`, so this is mostly about making the data workflow practical: loading multiple extracted JSON files, tracking runtime, and checking that player IDs line up cleanly across games.
-
-This is the natural first step for Version 2 because one-game gravity values will be noisy and lineup/context dependent.
+The workflow now loads multiple extracted JSON games, removes duplicate games, and fits player gravity values jointly. Output includes core-team players and their used offensive event/moment counts. A run with concentrated coverage of a few teams produced promising results in an initial rough eye test. Low-sample noise and formal validation remain covered by the extensions below.
 
 Link to other 7z files: https://github.com/sealneaward/nba-movement-data/tree/master
 

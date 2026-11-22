@@ -24,12 +24,17 @@ class Player:
 
 
 
+def raw_game_clock(raw_moment):
+    """Read the game clock without constructing players."""
+    return raw_moment[2]
+
+
 class Moment:
     """Wrapper around one raw SportVU-style moment."""
 
     def __init__(self, moment):
         self.id = moment[0]
-        self.game_clock = moment[2]
+        self.game_clock = raw_game_clock(moment)
         self.shot_clock = moment[3]
         self.locations = [Player(entry) for entry in moment[5]]
 

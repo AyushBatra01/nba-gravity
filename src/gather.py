@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.util import BALL_TEAM_ID, Moment, SCALE
+from src.util import BALL_TEAM_ID, Moment, SCALE, raw_game_clock
 
 
 def get_logs(game, gap=0.25, pad=3.0):
@@ -60,11 +60,9 @@ def get_event_logs(event, gap=0.25, pad=3.0, bound_start=None, bound_end=None):
     if len(raw_moments) < 2:
         return [], [], 0
 
-    moments = [Moment(moment) for moment in raw_moments]
-
     # Game clock counts down, so begin is larger than end within a normal event.
-    begin = moments[0].game_clock
-    end = moments[-1].game_clock
+    begin = raw_game_clock(raw_moments[0])
+    end = raw_game_clock(raw_moments[-1])
 
     if bound_start is not None:
         begin = min(begin, bound_start)
@@ -76,11 +74,9 @@ def get_event_logs(event, gap=0.25, pad=3.0, bound_start=None, bound_end=None):
     last_sampled_clock = begin
     num_errors = 0
 
-    for index in range(len(moments) - 1):
-        moment = moments[index]
-        next_moment = moments[index + 1]
-        clock = moment.game_clock
-        next_clock = next_moment.game_clock
+    for index in range(len(raw_moments) - 1):
+        clock = raw_game_clock(raw_moments[index])
+        next_clock = raw_game_clock(raw_moments[index + 1])
 
         # Ignore duplicate timestamps. 
         if clock == next_clock:
@@ -91,6 +87,8 @@ def get_event_logs(event, gap=0.25, pad=3.0, bound_start=None, bound_end=None):
         enough_gap = last_sampled_clock - clock >= gap
 
         if enough_start_padding and enough_end_padding and enough_gap:
+            moment = Moment(raw_moments[index])
+            next_moment = Moment(raw_moments[index + 1])
             if not all_moment_checks(moment, next_moment):
                 num_errors += 1
                 continue

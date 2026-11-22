@@ -10,15 +10,19 @@ The workflow now loads multiple extracted JSON games, removes duplicate games, a
 
 Link to other 7z files: https://github.com/sealneaward/nba-movement-data/tree/master
 
-### Efficiency Improvements
+### Efficiency Improvements — Complete
 
-Make the alternating fit practical enough to use as part of the normal workflow.
+The main efficiency improvements are implemented. Geometry optimization now scores prediction errors directly using cached arrays instead of rebuilding normal-equation matrices. It can also use a fixed random subset of moments throughout the alternating fit, while gravity fitting and the returned loss still use the full dataset.
 
-Right now the fixed-parameter gravity fit is reasonably fast, but the alternating procedure is slower because it repeatedly refits gravity values and re-optimizes geometry parameters. Version 2 should focus on turning this from an experimental option into something that can run comfortably on multiple games.
+Preprocessing now computes each defender-offender squared distance once per moment and reuses it across candidate matchups. Timestamp filtering also happens before constructing moment and player objects, avoiding unnecessary work on discarded frames.
 
-A practical first version could optimize geometry on a random subset of moments, then refit gravity on the full dataset once the parameters are chosen. Another option is to cache more geometry-independent arrays so each candidate parameter setting can be scored with less repeated work.
+#### Potential Further Improvements
 
-The goal is making the alternating fit fast enough that it can be used while experimenting, comparing settings, and scaling to multiple games.
+Further optimizations are lower priority and should be guided by benchmarks. Caching would likely provide more modest speedups; batching may offer a larger benefit but adds complexity.
+
+- Prepare each moment's six gravity values once per geometry optimization, avoiding repeated dictionary lookups and array creation while gravity is fixed.
+- Cache each moment's season-level player indices and matrix insertion indices, which are reused across full-data gravity fits.
+- Score geometry moments in batches with NumPy to reduce Python calls per evaluation. This would require additional array handling and is worth considering if geometry scoring remains a bottleneck.
 
 ### Sample-Size-Aware Gravity
 
@@ -35,6 +39,8 @@ This is the most pressing next extension since it will address noisy one game es
 Split the data by whole games into training, validation, and test sets. Adjacent tracking frames are highly correlated, so randomly splitting moments would leak nearly identical situations across sets. Remove duplicate games before splitting; a chronological split is useful if the goal is predicting future games.
 
 Fit player gravity values and any learned geometry parameters on the training set. Try a logarithmic grid of `alpha` values, such as 0.1, 1, 10, and 100, and choose the value with the lowest validation prediction error. Larger `alpha` means stronger ridge shrinkage toward zero. The current alternating fit holds `alpha` fixed and only tunes `rim_weight` and `decay_power`; alpha selection would wrap around that fitting procedure. With few games, use cross-validation by game within the development data while keeping a separate test set untouched.
+
+When comparing alpha values with the same training data and fixed geometry, build the normal-equation terms (`AtA`, `Atb`, and `btb`) once and reuse them. Only the regularization added before solving changes with alpha, so this avoids repeated passes over the training moments. Rebuild the terms when the training split or geometry changes; separate alternating fits may choose different geometry and cannot generally share one set of terms throughout tuning.
 
 After selecting alpha and the model assumptions, refit on training plus validation games and evaluate once on the test games without refitting on them. Use unpenalized per-coordinate RMSE, excluding the ridge penalty; the current solver returns a penalized objective, so its reported loss is not directly suitable for this comparison. Because the training objective sums errors, the effective strength of a fixed alpha depends on sample size; establish a consistent normalization when comparing folds and refitting on more games.
 

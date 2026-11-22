@@ -108,8 +108,17 @@ class ProcessedMoment:
 
     def loss(self, gravity, rim_weight=0.2, p=2, eps=DEFAULT_EPS):
         """Sum squared prediction error for this moment."""
-        residuals = self.resid(gravity, rim_weight, p, eps)
-        return sum(float(np.dot(vec, vec)) for vec in residuals.values())
+        baseline_xy = (1 - rim_weight) * self.matchup_xy + rim_weight * self.rim
+        displacement = self.attractor_xy[None, :, :] - baseline_xy[:, None, :]
+        distance = np.linalg.norm(displacement, axis=2)
+        coefficients = displacement / np.power(distance[..., None] + eps, p)
+
+        # Sum the six attractors' pulls for each defender, without building
+        # normal-equation matrices when gravity is already known.
+        gravity_values = np.array([gravity[attractor_id] for attractor_id in self.attractor_ids])
+        predicted_pull = np.sum(coefficients * gravity_values[None, :, None], axis=1)
+        residuals = self.defender_xy - baseline_xy - predicted_pull
+        return float(np.sum(residuals**2))
 
     def matrix(self, rim_weight=0.2, p=2, eps=DEFAULT_EPS):
         """Build the readable, unstacked linear-system rows for this moment."""

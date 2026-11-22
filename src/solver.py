@@ -24,26 +24,18 @@ class Solver:
         max_iterations=25,
     ):
         """Tune rim_weight and decay_power while holding gravity fixed."""
+        if player_list != self.season.player_list:
+            raise ValueError("Geometry optimization changed the fitted player list.")
+        gravity = dict(zip(player_list, gravity_values))
+
         def objective(x):
             rim_weight, decay_power = x
 
-            # For a candidate geometry, rebuild the normal-equation pieces and
-            # score the current gravity vector with matrix math. This is much
-            # faster than walking every moment through predicted_locations.
-            AtA, Atb, btb, candidate_player_list = self.season.normal_equation_terms(
+            return self.season.loss(
+                gravity,
                 rim_weight=rim_weight,
                 p=decay_power,
                 eps=current_config.eps,
-            )
-
-            if candidate_player_list != player_list:
-                raise ValueError("Geometry optimization changed the fitted player list.")
-
-            return self.season.loss_from_terms(
-                gravity_values,
-                AtA,
-                Atb,
-                btb,
                 alpha=current_config.alpha,
             )
 

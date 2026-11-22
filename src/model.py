@@ -44,6 +44,10 @@ def infer_matchups(offensive_players, defensive_players):
     offensive_xy = np.array([player.xy for player in offensive_players])
     defensive_xy = np.array([player.xy for player in defensive_players])
 
+    # Each defender-offender distance is shared by many candidate assignments.
+    displacement = defensive_xy[:, None, :] - offensive_xy[None, :, :]
+    squared_distances = np.sum(displacement**2, axis=2)
+
     best_matchups = None
     best_cost = np.inf
 
@@ -51,8 +55,7 @@ def infer_matchups(offensive_players, defensive_players):
     for matchups in permutations(range(5)):
         cost = 0.0
         for defender_index, offensive_index in enumerate(matchups):
-            displacement = defensive_xy[defender_index] - offensive_xy[offensive_index]
-            cost += np.sum(displacement**2)
+            cost += squared_distances[defender_index, offensive_index]
 
         if cost < best_cost:
             best_cost = cost

@@ -56,6 +56,14 @@ Good first targets are moment filtering, possession inference, matchup assignmen
 
 This would make the project safer to extend, especially once future versions start changing model assumptions.
 
+### Benchmarking
+
+Add a benchmarking script in a dedicated directory outside `src` to measure how runtime scales with dataset size and fitting settings.
+
+Measure fixed-parameter gravity fitting across different numbers of games or moments. For the alternating fit, also compare geometry sample sizes and iteration limits to understand how these settings affect runtime.
+
+This is a lower-priority extension that would help identify bottlenecks and measure the impact of future efficiency improvements.
+
 ### Sanity Check Outputs
 
 Create simple checks that the fitted gravity values resemble basketball reality.

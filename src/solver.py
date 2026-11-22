@@ -22,6 +22,7 @@ class Solver:
         rim_weight_bounds=(0.0, 0.8),
         decay_power_bounds=(0.5, 4.0),
         max_iterations=25,
+        moments=None,
     ):
         """Tune rim_weight and decay_power while holding gravity fixed."""
         if player_list != self.season.player_list:
@@ -30,6 +31,12 @@ class Solver:
 
         def objective(x):
             rim_weight, decay_power = x
+
+            if moments is not None:
+                return sum(
+                    moment.loss(gravity, rim_weight, decay_power, current_config.eps)
+                    for moment in moments
+                ) + current_config.alpha * np.dot(gravity_values, gravity_values)
 
             return self.season.loss(
                 gravity,
@@ -58,6 +65,8 @@ class Solver:
         decay_power_bounds=(0.5, 4.0),
         geometry_max_iterations=25,
         verbose=False,
+        geometry_sample_size=None,
+        random_seed=None,
     ):
         """Alternate between fitting gravity values and geometry parameters.
 
@@ -65,9 +74,34 @@ class Solver:
         1. Fit gravity values with the current geometry.
         2. Hold gravity fixed and optimize the geometry.
         3. Repeat until the fitted values and geometry stop moving much.
+
+        Gravity fits and the returned loss always use all moments. Set
+        geometry_sample_size to a positive integer to tune geometry on one
+        fixed uniform sample without replacement; None uses all moments.
+        random_seed makes that sample reproducible.
         """
         if initial_config is None:
             initial_config = GravityConfig()
+
+        geometry_moments = None
+        if geometry_sample_size is not None:
+            if (
+                isinstance(geometry_sample_size, (bool, np.bool_))
+                or not isinstance(geometry_sample_size, (int, np.integer))
+                or geometry_sample_size <= 0
+            ):
+                raise ValueError("geometry_sample_size must be a positive integer or None.")
+            moments = [
+                moment
+                for game in self.season.games
+                for event in game.events
+                for moment in event.moments
+            ]
+            if geometry_sample_size < len(moments):
+                indices = np.random.default_rng(random_seed).choice(
+                    len(moments), size=geometry_sample_size, replace=False
+                )
+                geometry_moments = [moments[index] for index in indices]
 
         config = initial_config
         gravity_values, player_list, loss = self.solve_gravity(config)
@@ -80,6 +114,7 @@ class Solver:
                 rim_weight_bounds=rim_weight_bounds,
                 decay_power_bounds=decay_power_bounds,
                 max_iterations=geometry_max_iterations,
+                moments=geometry_moments,
             )
 
             new_config = GravityConfig(
